@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.example.demo.dtos.EmployeeDTO;
 import com.example.demo.services.EmployeeService;
 
-import jakarta.validation.Valid;
+import javax.validation.Valid;
 
 @CrossOrigin(origins = "http://localhost:5173")
 @RestController
