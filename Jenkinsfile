@@ -30,15 +30,20 @@ pipeline {
             }
         }
 
-        stage('Stop Tomcat') {
+        stage('Stop Tomcat (If Running)') {
             steps {
                 bat '''
                 @echo off
                 echo Checking if Tomcat is running...
 
-                for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8080') do (
-                    echo Killing process %%a
-                    taskkill /F /PID %%a >nul 2>&1
+                netstat -aon | findstr :8080 >nul
+                if %errorlevel%==0 (
+                    echo Tomcat is running. Stopping...
+                    cd /d C:\\RahulSoftware\\apache-tomcat-9.0.86\\bin
+                    call shutdown.bat >nul 2>&1
+                    timeout /t 5 >nul
+                ) else (
+                    echo Tomcat not running. Skipping stop.
                 )
 
                 exit /b 0
@@ -48,20 +53,20 @@ pipeline {
 
         stage('Clean Old Deployment') {
             steps {
-                bat """
+                bat '''
                 echo Cleaning old deployment...
-                del /Q ${TOMCAT_WEBAPPS}\\ROOT.war >nul 2>&1
-                rmdir /S /Q ${TOMCAT_WEBAPPS}\\ROOT >nul 2>&1
-                """
+                del /Q C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\ROOT.war >nul 2>&1
+                rmdir /S /Q C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\ROOT >nul 2>&1
+                '''
             }
         }
 
-        stage('Deploy to Tomcat') {
+        stage('Deploy WAR') {
             steps {
-                bat """
+                bat '''
                 echo Deploying WAR as ROOT...
-                copy /Y target\\${WAR_NAME} ${TOMCAT_WEBAPPS}\\ROOT.war
-                """
+                copy /Y target\\EmployeeManagement.war C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\ROOT.war
+                '''
             }
         }
 
@@ -73,9 +78,10 @@ pipeline {
 
                 cd /d C:\\RahulSoftware\\apache-tomcat-9.0.86\\bin
 
-                start "" cmd /c "catalina.bat run"
+                REM Start Tomcat in background (IMPORTANT)
+                start "" startup.bat
 
-                echo Waiting for Tomcat to initialize...
+                echo Waiting for Tomcat to boot...
                 ping 127.0.0.1 -n 10 >nul
 
                 exit /b 0
@@ -92,7 +98,7 @@ pipeline {
                 set retries=10
 
                 :loop
-                curl --fail http://localhost:8080/ >nul 2>&1
+                powershell -Command "(Invoke-WebRequest http://localhost:8080 -UseBasicParsing).StatusCode" >nul 2>&1
 
                 if %errorlevel%==0 (
                     echo Application is UP!
@@ -100,9 +106,9 @@ pipeline {
                 )
 
                 echo Waiting for application...
-                ping 127.0.0.1 -n 6 >nul
-
+                ping 127.0.0.1 -n 5 >nul
                 set /a retries-=1
+
                 if %retries% GTR 0 goto loop
 
                 echo Application failed to start
