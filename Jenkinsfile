@@ -41,7 +41,6 @@ pipeline {
                     taskkill /F /PID %%a >nul 2>&1
                 )
 
-                echo Stop step completed
                 exit /b 0
                 '''
             }
@@ -74,11 +73,10 @@ pipeline {
 
                 cd /d C:\\RahulSoftware\\apache-tomcat-9.0.86\\bin
 
-                REM Start Tomcat in separate window (stable for Jenkins)
                 start "" cmd /c "catalina.bat run"
 
                 echo Waiting for Tomcat to initialize...
-                timeout /t 10 >nul
+                ping 127.0.0.1 -n 10 >nul
 
                 exit /b 0
                 '''
@@ -102,9 +100,9 @@ pipeline {
                 )
 
                 echo Waiting for application...
-                timeout /t 5 >nul
-                set /a retries-=1
+                ping 127.0.0.1 -n 6 >nul
 
+                set /a retries-=1
                 if %retries% GTR 0 goto loop
 
                 echo Application failed to start
