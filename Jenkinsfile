@@ -3,7 +3,7 @@ pipeline {
 
     tools {
         maven 'MAVEN_HOME'
-        jdk 'JDK11' // Ensure this is configured in Jenkins
+        jdk 'Java_Home' // Ensure this is configured in Jenkins
     }
 
     environment {
