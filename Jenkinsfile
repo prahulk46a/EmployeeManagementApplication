@@ -3,36 +3,46 @@ pipeline {
 
     tools {
         maven 'MAVEN_HOME'
+        jdk 'JDK11' // Ensure this is configured in Jenkins
     }
 
     environment {
-        PROJECT_PATH = "D:\\Java Projects\\EmployeeManagementApplication"
         TOMCAT_HOME = "C:\\RahulSoftware\\apache-tomcat-9.0.86"
         TOMCAT_WEBAPPS = "${TOMCAT_HOME}\\webapps"
+        APP_NAME = "EmployeeManagement"
     }
 
     stages {
 
+        stage('Checkout Code') {
+            steps {
+                git(
+                    url: 'https://github.com/prahulk46a/EmployeeManagementApplication',
+                    branch: 'main',
+                    credentialsId: 'github-creds'
+                )
+            }
+        }
+
         stage('Build') {
             steps {
-                dir("${PROJECT_PATH}") {
-                    bat 'mvn clean package -DskipTests'
-                }
+                bat 'mvn clean package -DskipTests'
             }
         }
 
         stage('Stop Tomcat') {
             steps {
-                bat '''
-                for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8080') do taskkill /F /PID %%a
-                '''
+                bat """
+                cd /d ${TOMCAT_HOME}\\bin
+                shutdown.bat || echo Tomcat already stopped
+                """
             }
         }
 
         stage('Clean Old Deployment') {
             steps {
                 bat """
-                del /Q ${TOMCAT_WEBAPPS}\\*.war
+                del /Q ${TOMCAT_WEBAPPS}\\*.war || echo No old WAR files
                 """
             }
         }
@@ -40,7 +50,7 @@ pipeline {
         stage('Deploy to Tomcat') {
             steps {
                 bat """
-                copy /Y "${PROJECT_PATH}\\target\\*.war" "${TOMCAT_WEBAPPS}"
+                copy /Y target\\*.war ${TOMCAT_WEBAPPS}
                 """
             }
         }
@@ -52,6 +62,24 @@ pipeline {
                 startup.bat
                 """
             }
+        }
+
+        stage('Health Check') {
+            steps {
+                bat """
+                timeout /t 10
+                curl http://localhost:8080/ || echo App might still be starting
+                """
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Deployment Successful'
+        }
+        failure {
+            echo '❌ Pipeline Failed - Check logs'
         }
     }
 }
