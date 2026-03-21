@@ -36,16 +36,12 @@ pipeline {
                 @echo off
                 echo Checking if Tomcat is running...
 
-                netstat -aon | findstr :8080 >nul
-                if %errorlevel%==0 (
-                    echo Tomcat running. Stopping...
-                    cd /d C:\\RahulSoftware\\apache-tomcat-9.0.86\\bin
-                    call shutdown.bat >nul 2>&1
-                    echo Tomcat stopped.
-                ) else (
-                    echo Tomcat not running. Skipping.
+                for /f "tokens=5" %%a in ('netstat -aon ^| findstr :8080') do (
+                    echo Killing process %%a
+                    taskkill /F /PID %%a >nul 2>&1
                 )
 
+                echo Stop step completed
                 exit /b 0
                 '''
             }
@@ -54,7 +50,7 @@ pipeline {
         stage('Clean Old Deployment') {
             steps {
                 bat """
-                echo Cleaning old deployments...
+                echo Cleaning old deployment...
                 del /Q ${TOMCAT_WEBAPPS}\\ROOT.war >nul 2>&1
                 rmdir /S /Q ${TOMCAT_WEBAPPS}\\ROOT >nul 2>&1
                 """
@@ -72,11 +68,20 @@ pipeline {
 
         stage('Start Tomcat') {
             steps {
-                bat """
+                bat '''
+                @echo off
                 echo Starting Tomcat...
-                cd /d ${TOMCAT_HOME}\\bin
-                startup.bat
-                """
+
+                cd /d C:\\RahulSoftware\\apache-tomcat-9.0.86\\bin
+
+                REM Start Tomcat in separate window (stable for Jenkins)
+                start "" cmd /c "catalina.bat run"
+
+                echo Waiting for Tomcat to initialize...
+                timeout /t 10 >nul
+
+                exit /b 0
+                '''
             }
         }
 
@@ -84,18 +89,19 @@ pipeline {
             steps {
                 bat '''
                 @echo off
-                echo Waiting for application to start...
+                echo Performing health check...
 
-                set retries=6
+                set retries=10
 
                 :loop
-                curl http://localhost:8080/ >nul 2>&1
+                curl --fail http://localhost:8080/ >nul 2>&1
+
                 if %errorlevel%==0 (
                     echo Application is UP!
                     exit /b 0
                 )
 
-                echo Waiting...
+                echo Waiting for application...
                 timeout /t 5 >nul
                 set /a retries-=1
 
