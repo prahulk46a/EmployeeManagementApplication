@@ -62,5 +62,10 @@ public class EmployeeController {
             @RequestParam(defaultValue = "asc") String direction) {
         return ResponseEntity.ok(employeeService.getAllEmployeesPaginated(page, size, sortBy, direction));
     }
+
+    @GetMapping("/hello")
+    public String helloworld() {
+        return "Hello World";
+    }
 	
 }
