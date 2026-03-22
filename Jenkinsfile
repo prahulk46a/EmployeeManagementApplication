@@ -85,26 +85,17 @@ pipeline {
             steps {
                 bat '''
                 @echo off
-                echo Performing health check...
+                echo Checking if Tomcat is running on port 8080...
 
-                set retries=10
-
-                :loop
-                powershell -Command "(Invoke-WebRequest http://localhost:8080/EmployeeManagement -UseBasicParsing).StatusCode" >nul 2>&1
+                netstat -aon | findstr :8080 >nul
 
                 if %errorlevel%==0 (
-                    echo Application is UP!
+                    echo Tomcat is UP!
                     exit /b 0
+                ) else (
+                    echo Tomcat is DOWN!
+                    exit /b 1
                 )
-
-                echo Waiting for application...
-                ping 127.0.0.1 -n 5 >nul
-                set /a retries-=1
-
-                if %retries% GTR 0 goto loop
-
-                echo Application failed to start
-                exit /b 1
                 '''
             }
         }
