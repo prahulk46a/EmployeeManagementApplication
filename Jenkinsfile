@@ -6,12 +6,6 @@ pipeline {
         jdk 'Java_Home'
     }
 
-    environment {
-        TOMCAT_HOME = "C:\\RahulSoftware\\apache-tomcat-9.0.86"
-        TOMCAT_WEBAPPS = "${TOMCAT_HOME}\\webapps"
-        WAR_NAME = "EmployeeManagement.war"
-    }
-
     stages {
 
         stage('Checkout Code') {
@@ -55,8 +49,8 @@ pipeline {
             steps {
                 bat '''
                 echo Cleaning old deployment...
-                del /Q C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\ROOT.war >nul 2>&1
-                rmdir /S /Q C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\ROOT >nul 2>&1
+                del /Q C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\EmployeeManagement.war >nul 2>&1
+                rmdir /S /Q C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\EmployeeManagement >nul 2>&1
                 '''
             }
         }
@@ -64,8 +58,8 @@ pipeline {
         stage('Deploy WAR') {
             steps {
                 bat '''
-                echo Deploying WAR as ROOT...
-                copy /Y target\\EmployeeManagement.war C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\ROOT.war
+                echo Deploying WAR...
+                copy /Y target\\EmployeeManagement.war C:\\RahulSoftware\\apache-tomcat-9.0.86\\webapps\\EmployeeManagement.war
                 '''
             }
         }
@@ -77,8 +71,6 @@ pipeline {
                 echo Starting Tomcat...
 
                 cd /d C:\\RahulSoftware\\apache-tomcat-9.0.86\\bin
-
-                REM Start Tomcat in background (IMPORTANT)
                 start "" startup.bat
 
                 echo Waiting for Tomcat to boot...
@@ -98,7 +90,7 @@ pipeline {
                 set retries=10
 
                 :loop
-                powershell -Command "(Invoke-WebRequest http://localhost:8080 -UseBasicParsing).StatusCode" >nul 2>&1
+                powershell -Command "(Invoke-WebRequest http://localhost:8080/EmployeeManagement -UseBasicParsing).StatusCode" >nul 2>&1
 
                 if %errorlevel%==0 (
                     echo Application is UP!
